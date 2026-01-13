@@ -43,6 +43,10 @@ def add_task(title: str):
 
 
 def list_tasks():
+    print()
+    print("ID  Status  Title (Created At)")
+    print("-----------------------------------------")
+
     conn = get_connection()
     cur = conn.cursor()
     cur.execute(
@@ -57,11 +61,14 @@ def list_tasks():
 
     if not rows:
         print("No tasks found.")
+        print()
         return
 
     for task_id, title, is_done, created_at in rows:
         status = "x" if is_done else " "
         print(f"[{status}] {task_id}: {title} ({created_at})")
+
+    print()
 
 
 def mark_done(task_id: int):
