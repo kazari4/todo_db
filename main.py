@@ -60,8 +60,40 @@ def list_tasks():
         return
 
     for task_id, title, is_done, created_at in rows:
-        status = "✔" if is_done else " "
+        status = "x" if is_done else " "
         print(f"[{status}] {task_id}: {title} ({created_at})")
+
+
+def mark_done(task_id: int):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    # 存在チェック
+    cur.execute(
+        """
+        SELECT id FROM tasks WHERE id = ?
+        """,
+        (task_id,),
+    )
+    row = cur.fetchone()
+
+    if row is None:
+        print(f"Task with id {task_id} not found.")
+        conn.close()
+        return
+
+    # 完了に更新
+    cur.execute(
+        """
+        UPDATE tasks
+        SET is_done = 1
+        WHERE id = ?
+        """,
+        (task_id,),
+    )
+    conn.commit()
+    conn.close()
+    print(f"Marked task {task_id} as done.")
 
 
 def parse_args():
@@ -73,6 +105,9 @@ def parse_args():
     add_parser.add_argument("title", nargs="?", help="Task title")
 
     subparsers.add_parser("list", help="List all tasks")
+
+    done_parser = subparsers.add_parser("done", help="Mark a task as done")
+    done_parser.add_argument("id", type=int, help="Task ID")
 
     return parser.parse_args()
 
@@ -89,8 +124,12 @@ def main():
             print("Task title cannot be empty.")
             return
         add_task(title)
+
     elif args.command == "list":
         list_tasks()
+
+    elif args.command == "done":
+        mark_done(args.id)
 
 
 if __name__ == "__main__":
