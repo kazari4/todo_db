@@ -103,18 +103,37 @@ def mark_done(task_id: int):
     print(f"Marked task {task_id} as done.")
 
 
+def delete_task(task_id: int):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("SELECT id FROM tasks WHERE id = ?", (task_id,))
+    if cur.fetchone() is None:
+        print(f"Task with id {task_id} not found.")
+        conn.close()
+        return
+
+    cur.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    conn.commit()
+    conn.close()
+    print(f"Deleted task {task_id}.")
+
+
 def parse_args():
-    parser = argparse.ArgumentParser(description="ToDo application")
+    parser = argparse.ArgumentParser(description="ToDoリスト")
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    add_parser = subparsers.add_parser("add", help="Add a new task")
+    add_parser = subparsers.add_parser("add", help="taskを追加する")
     add_parser.add_argument("title", nargs="?", help="Task title")
 
-    subparsers.add_parser("list", help="List all tasks")
+    subparsers.add_parser("list", help="全てのtaskを表示する")
 
-    done_parser = subparsers.add_parser("done", help="Mark a task as done")
+    done_parser = subparsers.add_parser("done", help="taskを完了する")
     done_parser.add_argument("id", type=int, help="Task ID")
+    
+    delete_parser = subparsers.add_parser("delete", help="taskを削除する")
+    delete_parser.add_argument("id", type=int, help="Task ID")
 
     return parser.parse_args()
 
@@ -137,6 +156,9 @@ def main():
 
     elif args.command == "done":
         mark_done(args.id)
+    
+    elif args.command == "delete":
+        delete_task(args.id)
 
 
 if __name__ == "__main__":
