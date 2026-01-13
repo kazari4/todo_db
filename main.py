@@ -42,20 +42,27 @@ def add_task(title: str):
     print(f"Added task: {title}")
 
 
-def list_tasks():
+def list_tasks(show_done=False, show_todo=False):
     print()
     print("ID  Status  Title (Created At)")
     print("-----------------------------------------")
 
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute(
-        """
+
+    query = """
         SELECT id, title, is_done, created_at
         FROM tasks
-        ORDER BY id
-        """
-    )
+    """
+
+    if show_done:
+        query += " WHERE is_done = 1"
+    elif show_todo:
+        query += " WHERE is_done = 0"
+
+    query += " ORDER BY id"
+
+    cur.execute(query)
     rows = cur.fetchall()
     conn.close()
 
@@ -127,11 +134,14 @@ def parse_args():
     add_parser = subparsers.add_parser("add", help="taskを追加する")
     add_parser.add_argument("title", nargs="?", help="Task title")
 
-    subparsers.add_parser("list", help="全てのtaskを表示する")
+    list_parser = subparsers.add_parser("list", help="taskを表示する")
+    group = list_parser.add_mutually_exclusive_group()
+    group.add_argument("--done", action="store_true", help="完了したtaskのみ表示")
+    group.add_argument("--todo", action="store_true", help="未完了のtaskのみ表示")
 
     done_parser = subparsers.add_parser("done", help="taskを完了する")
     done_parser.add_argument("id", type=int, help="Task ID")
-    
+
     delete_parser = subparsers.add_parser("delete", help="taskを削除する")
     delete_parser.add_argument("id", type=int, help="Task ID")
 
@@ -152,11 +162,11 @@ def main():
         add_task(title)
 
     elif args.command == "list":
-        list_tasks()
+        list_tasks(show_done=args.done, show_todo=args.todo)
 
     elif args.command == "done":
         mark_done(args.id)
-    
+
     elif args.command == "delete":
         delete_task(args.id)
 
