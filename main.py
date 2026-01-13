@@ -1,13 +1,18 @@
+import argparse
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 
 DB_PATH = Path("todo.db")
 
 
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
+def get_connection():
+    return sqlite3.connect(DB_PATH)
 
+
+def init_db():
+    conn = get_connection()
+    cur = conn.cursor()
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS tasks (
@@ -18,14 +23,74 @@ def init_db():
         )
         """
     )
-
     conn.commit()
     conn.close()
 
 
+def add_task(title: str):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO tasks (title, is_done, created_at)
+        VALUES (?, 0, ?)
+        """,
+        (title, datetime.now().isoformat(timespec="seconds")),
+    )
+    conn.commit()
+    conn.close()
+    print(f"Added task: {title}")
+
+
+def list_tasks():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT id, title, is_done, created_at
+        FROM tasks
+        ORDER BY id
+        """
+    )
+    rows = cur.fetchall()
+    conn.close()
+
+    if not rows:
+        print("No tasks found.")
+        return
+
+    for task_id, title, is_done, created_at in rows:
+        status = "✔" if is_done else " "
+        print(f"[{status}] {task_id}: {title} ({created_at})")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="ToDo application")
+
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    add_parser = subparsers.add_parser("add", help="Add a new task")
+    add_parser.add_argument("title", nargs="?", help="Task title")
+
+    subparsers.add_parser("list", help="List all tasks")
+
+    return parser.parse_args()
+
+
 def main():
     init_db()
-    print("Database initialized successfully.")
+    args = parse_args()
+
+    if args.command == "add":
+        title = args.title
+        if not title:
+            title = input("Enter task: ").strip()
+        if not title:
+            print("Task title cannot be empty.")
+            return
+        add_task(title)
+    elif args.command == "list":
+        list_tasks()
 
 
 if __name__ == "__main__":
